@@ -1,3 +1,6 @@
+/**
+ * Define the Interpreter class and the constructor
+ */
 var Interpreter = function() {
     this.configuration = {
         'name' : 'IOTInterpreter',
@@ -5,19 +8,23 @@ var Interpreter = function() {
         'tag' : 'beta',
         'title' : ''    
         };
-            
-    // ReadLine class  
-    this.prefix = '>';        
-    this.rl = require('readline').createInterface(process.stdin, process.stdout);    
+                  
+    this.prefix = '>';            
     this.bridge = null;        
     this.init();
                         
 };
 
+/**
+ * Define de class method startsWith
+ */
 String.prototype.startsWith = function(prefix) {
     return this.indexOf(prefix) === 0;
 }
 
+/**
+ * Define de class method endsWith
+ */
 String.prototype.endsWith = function(suffix) {
     return this.match(suffix+"$") == suffix;
 };
@@ -30,10 +37,23 @@ function err(params) {
     console.error(params);
 }
 
+/**
+ * Assign a readline to the interpreter
+ */
+Interpreter.prototype.assignReadline = function(readline) {
+    this.rl = readline;
+}
+
+/**
+ * Serve on close event of readline e.g. when closing the console with ctrl+c
+ */
 Interpreter.prototype.onClose =  function() {    
     process.exit(0);
 };
 
+/**
+ * Serve on new line of readline e.g. when pressing enter after editing a line
+ */
 Interpreter.prototype.onNewLine = function(line) {
     
         if (line.trim() === '') return;
@@ -71,36 +91,62 @@ Interpreter.prototype.onNewLine = function(line) {
                     }
                 }
             };         
-        }       
-
+        }
+        
+        //************************
+        // Send a text to the current channel
+        //************************
+        if (args[0].startsWith('>')) {
+            if (this.bridge) {                
+                this.bridge.sendText(args[0].substring(1));
+            }            
+        }        
+        
+        //************************
+        // List channels
+        //************************
+        if (args[0].startsWith('ls')) {
+            if (this.bridge) {             
+                if (args.length === 1) {
+                    log(this.bridge.list(''));
+                } else {                   
+                    log(this.bridge.list(args[1].trim()));
+                }
+            }
+        }
+                
         //************************
         // Open Channel
         //************************
-        if (args[0].startsWith(':o')) {
+        if (args[0].startsWith('o')) {
             if (this.bridge) {
-                log('TODO: this.bridge.openChannel();');
+                this.bridge.openCurrentChannel();
+                this.prompt();
             }            
-        }
+        }        
         
         //************************
         // Close Channel
         //************************
-        if (args[0].startsWith(':c')) {
+        if (args[0].startsWith('c')) {
             if (this.bridge) {
-                log('TODO: this.bridge.closeChannel();');
+                this.bridge.closeCurrentChannel();
             }            
         }        
         
         //************************
         // Help
         //************************
-        if (args[0].startsWith(':h')) {            
+        if (args[0].startsWith('h')) {            
             console.log('List of commands : ');
             console.log(' /lora port        - remap "lora" channel to a new "port". Use COM1 for Windows or /dev/tty-usbserial1 for Linux ');
             console.log(' /lora             - change to port mapped to the channel "lora"');
-            console.log(' :o                - open the port on the current channel');            
-            console.log(' :c                - close the port on the current channel');            
-            console.log(' :h                - this screen');            
+            console.log(' >text             - sends the text to the current channel');
+            console.log(' ls                - list the current channels');
+            console.log(' o                 - open the port on the current channel');            
+            console.log(' c                 - close the port on the current channel');            
+            console.log(' exit              - close exit the process where the interpreter runs');
+            console.log(' h                 - this screen');            
             console.log('Examples:');        
             console.log(' /lora COM1        - map "lora" channel to COM1');
             console.log(' /gps COM2         - map "gps" channel to COM2');
@@ -108,6 +154,13 @@ Interpreter.prototype.onNewLine = function(line) {
             console.log(' /bt               - change to "gps" channel');
             console.log(' D                 - send D command to the bluetooth device');
         }    
+        
+        //************************
+        // exit
+        //************************
+        if (args[0] === 'exit') {
+            process.exit(0);
+        }        
 
         this.prompt();
         
@@ -134,33 +187,56 @@ console.log("hello world!");
 
 */
 
+/**
+ * Set the bridge to the interpreter class
+ */
 Interpreter.prototype.setBridge = function(bridge) {
     this.bridge = bridge;
-    console.log("Bridging with "+this.bridge.configuration.title);
+    if (this.bridge) {
+        console.log("Bridging with "+this.bridge.configuration.title);
+    }
 };
 
+/**
+ * Init the object instance
+ */
 Interpreter.prototype.init = function() {    
     this.configuration.title = this.configuration.name + ' v' +this.configuration.version+' '+this.configuration.tag;
     console.log(this.configuration.title);
 };
 
-Interpreter.prototype.setPrompt = function(prompt) {
-    this.prefix = prompt;
-    this.rl.setPrompt(this.prefix);
-    this.rl.prompt();
+/**
+ * Set the interpreter prompt text
+ */
+Interpreter.prototype.setPrompt = function(text) {
+    this.prefix = text;
+    if (this.rl) {
+        this.rl.setPrompt(this.prefix);
+        this.rl.prompt();
+    }
 };
 
+/**
+ * Run the interpreter
+ */
 Interpreter.prototype.run = function() {
     // since we react on readline class events we need to assign the bridge to the readline instance
-    this.rl.bridge = this.bridge;
-    
-    // link the readline events
-    this.rl.on('line',this.onNewLine).on('close', this.onClose);
+    if (this.rl) {
+        this.rl.bridge = this.bridge;        
+        // link the readline events
+        this.rl.on('line',this.onNewLine).on('close', this.onClose);
+    }
     this.setPrompt(this.prefix);    
 };
 
+/**
+ * Shows the interpreter prompt
+ */
 Interpreter.prototype.prompt = function() {    
-    this.prompt();    
+    this.prompt();
 };
 
+/**
+ * Export the interpreter object instance
+ */
 module.exports.Interpreter = new Interpreter();

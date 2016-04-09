@@ -1,33 +1,90 @@
-// Global SerialPort class
+/**
+ * Instanciate the global SerialPort class
+ */
 SerialPort = require("serialport").SerialPort;
 
+/**
+ * Define the Bridge class and constructor
+ */
 var Bridge = function() {
-    
+        
     this.configuration = {
     'name' : 'IOTBridge',
     'version' : '0.0.1',
     'tag' : 'beta',
     'title' : '',
     'channels' : {
-        'lora' : 'COM5'
-        //'gps'  : 'COM3'   
+        'lora' : 'COM1',
+        'btle' : 'COM2',
+        'gps'  : 'COM3'   
     },
     'ports' : {
         
-        }
-    }
-    
+        },
+    'routes' : {
+        //source : {destinations}
+        'lora' : {
+            },
+        'gps' : {
+                'coordinates' : ['lora','btle'],
+                'timestamp'   : ['lora']
+            },
+        'btle' : {                
+            }                        
+        },
+      'filters' : {
+          'lora' : {
+              
+          },
+          'btle' : {
+              
+          },
+          'gps' : {
+              'coordinates' : 'todo: regex',
+              'timestamp' : 'todo: regex',
+          },          
+      }
+    }    
    this.init();                  
 };
 
+/**
+ * Log a message to the console
+ */
 function log(params) {
     console.log(params);
 }
 
+/**
+ * Log an error to the console
+ */
 function err(params) {
     console.error(params);
 }
 
+/**
+ * Gets the port instance of a specific channel.
+ */
+Bridge.prototype.getPortOfChannel = function(channel) {
+    var portName = this.configuration.channels[channel];
+    return this.configuration.ports[portName]; 
+}
+
+/**
+ * Gets the minimal channel info in one line for display purposes
+ */
+Bridge.prototype.getChannelInfo = function(channel) {
+    var port =  this.getPortOfChannel(channel);
+    var info =  channel;
+    //if (port) {
+    //    info += "[" + port.path+"]";
+    //}
+    return info;
+}
+
+/**
+ * (re)Map a channel to a specific port
+ */
 Bridge.prototype.mapChannel = function(name,port) {
     if (port === "") {
         delete this.configuration.channels[name];    
@@ -38,15 +95,49 @@ Bridge.prototype.mapChannel = function(name,port) {
     this.configure();        
 }
 
+/**
+ * Lists various information about the bridhe
+ */
+Bridge.prototype.list = function(text) {
+    
+    log("List "+text);
+    // where text
+    // nothing  - list entire configuration
+    // ports    - list ports
+    // channels - list channels
+    // routes   - list routes
+    if (text === "") {
+        return this.configuration;
+    }
+    if (text === "ports") {
+        return this.configuration.ports;
+    }
+    if (text === "channels") {
+        return this.configuration.channels;
+    }    
+    if (text === "routes") {
+        return this.configuration.routes;
+    }
+    if (text === "filters") {
+        return this.configuration.filters;
+    }    
+}
+
+/**
+ * (re)Configure the bridge
+ */
 Bridge.prototype.configure = function() {
-    console.log('Reconfiguring channels');
+    console.log('Reconfiguring channels, ports, routes');
     
     // close the ports
     for (var channel in this.configuration.channels) {
        var portName = this.configuration.channels[channel];
-       console.log('Closing '+portName);
-       if (this.configuration.ports[portName]) {
-        this.configuration.ports[portName].close();
+       var port = this.configuration.ports[portName];
+       if (port) {
+           if (port.isOpen() ){               
+            log('Closing '+portName)
+            port.close();
+           }
        } 
     }
     
@@ -92,23 +183,87 @@ Bridge.prototype.configure = function() {
 }
 
 
+/**
+ * Change currentChannel to a new channel
+ */
 Bridge.prototype.changeChannel =  function(channel) {
     if (this.configuration.channels[channel]) {        
         this.configuration.currentChannel = channel;
         log('Switching to '+channel + '['+this.configuration.channels[channel]+']' );
         return true;
     } else {
-        err('Channel '+channel+' not found. Use "/name port" command to define a new channel e.g. >/lora COM1');
+        err(channelError(channel));
         return false;
     }
 }
 
-// Build the title
+function channelError(channel) {
+    return 'Channel '+channel+' not found. Use "/name port" command to define a new channel e.g. >/lora COM1';
+}
+
+/**
+ * Open currentChannel
+ */
+Bridge.prototype.openCurrentChannel =  function() {
+    var crtChannel = this.configuration.currentChannel;
+    var self = this;   
+    var port = this.getPortOfChannel(crtChannel);
+    if (!port) {
+        err(channelError(''));
+        return;
+    }
+    if (port.isOpen()) {
+       err(self.getChannelInfo(crtChannel) + ' is already open');
+       return;        
+    }    
+    port.open(function(error) {
+        if(error) {
+            err(error);
+        }        
+    });
+}
+
+/**
+ * Send text to currentChannel
+ */
+Bridge.prototype.sendText =  function(text) {
+    err("ToDo: sendText "+text);
+}
+
+/**
+ * Close currentChannel
+ */
+Bridge.prototype.closeCurrentChannel =  function() {
+    var crtChannel = this.configuration.currentChannel;
+    var self = this;   
+    var port = this.getPortOfChannel(crtChannel);
+    if (!port) {
+        err(channelError(''));
+        return;
+    }    
+    if (port.isOpen()) {
+        port.close(function(error) {
+            if (error) {
+                err(error);
+            }
+        });
+    } else {
+            err(self.getChannelInfo(crtChannel) + ' is already closed');        
+        }
+}
+
+/**
+ * Init the bridge class instance
+ */
 Bridge.prototype.init = function() {
     this.configuration.title = this.configuration.name + ' v' +this.configuration.version+' '+this.configuration.tag;
+    this.configure();
     //console.log(this.configuration.title); 
     //this.mapChannel('lora','COM1');
     //bridge.map('bt','');
 }
 
+/**
+ * Export the Bridge class object instance
+ */
 module.exports.Bridge = new Bridge();
