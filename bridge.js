@@ -1,7 +1,9 @@
 /**
  * Instanciate the global SerialPort class
  */
-SerialPort = require("serialport").SerialPort;
+serialport = require("serialport");
+SerialPort = serialport.SerialPort;
+
 
 /**
  * Define the Bridge class and constructor
@@ -13,10 +15,12 @@ var Bridge = function() {
     'version' : '0.0.1',
     'tag' : 'beta',
     'title' : '',
+    'currentChannel' : null,
+    'currentPort' : null,
     'channels' : {
-        'lora' : 'COM1',
-        'btle' : 'COM2',
-        'gps'  : 'COM3'   
+        'lora' : 'COM3',
+        'gps'  : 'COM4',
+        'btle' : 'COM5'          
     },
     'ports' : {
         
@@ -44,7 +48,8 @@ var Bridge = function() {
               'timestamp' : 'todo: regex',
           },          
       }
-    }    
+    }
+   this.handler = null;
    this.init();                  
 };
 
@@ -60,6 +65,14 @@ function log(params) {
  */
 function err(params) {
     console.error(params);
+}
+
+/**
+ * Gets the currentPort based on currentChannel
+ */
+Bridge.prototype.getCurrentPort = function() {
+    var channel = this.configuration.channels[this.configuration.currentChannel];
+    return this.configuration.ports[channel];
 }
 
 /**
@@ -143,6 +156,7 @@ Bridge.prototype.configure = function() {
     
     // delete the mapped serial ports
     this.configuration.ports = {};
+    var self = this;
     
     for (var channel in this.configuration.channels) {
                
@@ -166,14 +180,21 @@ Bridge.prototype.configure = function() {
         //disconnectedCallback
         //platformOptions - sets platform specific options, see below.
         try {                    
-            this.configuration.ports[portName] = new SerialPort(
+            var port = new SerialPort(
                 //"/dev/tty-usbserial1", {
                     portName, {
                     baudrate: 115200,
                     dataBits : 8,
                     stopBits : 1,
-                    parity : 'none'
+                    parity : 'none'                                        
                 }, false);
+            port.on('data',function(data) {
+                    if (self.handler) {
+                        self.handler(self,channel,port,data);
+                    }             
+                });
+            this.configuration.ports[portName]= port;
+            port.open();                
         } catch (ex) {
             err(ex);
         }
@@ -189,6 +210,7 @@ Bridge.prototype.configure = function() {
 Bridge.prototype.changeChannel =  function(channel) {
     if (this.configuration.channels[channel]) {        
         this.configuration.currentChannel = channel;
+        this.configuration.currentPort = this.getCurrentPort();
         log('Switching to '+channel + '['+this.configuration.channels[channel]+']' );
         return true;
     } else {
@@ -197,59 +219,86 @@ Bridge.prototype.changeChannel =  function(channel) {
     }
 }
 
+/**
+ * Return a channel error text
+ */
 function channelError(channel) {
     return 'Channel '+channel+' not found. Use "/name port" command to define a new channel e.g. >/lora COM1';
 }
 
 /**
- * Open currentChannel
+ * returns true if the text matches channe name
  */
-Bridge.prototype.openCurrentChannel =  function() {
-    var crtChannel = this.configuration.currentChannel;
-    var self = this;   
-    var port = this.getPortOfChannel(crtChannel);
-    if (!port) {
-        err(channelError(''));
-        return;
+Bridge.prototype.matchesChannel =  function(text) {
+    for (var channel in this.configuration.channels) {
+        if (channel === text) {
+            return true;
+        }
     }
-    if (port.isOpen()) {
-       err(self.getChannelInfo(crtChannel) + ' is already open');
-       return;        
-    }    
-    port.open(function(error) {
-        if(error) {
+    return false;
+}
+    
+/**
+ * Open currentChannel (async)
+ */
+Bridge.prototype.openCurrentChannel =  function(ok, fail) {
+    var instance = this.currentPort;
+    if (this.configuration.currentPort) {
+        this.configuration.currentPort.open(function(error) {
+            if (error) {
+                fail(instance,error);
+                err(error);
+            } else {
+                if (ok) {
+                    ok(instance);
+                }                
+            }
+        });
+    }
+}
+
+/**
+ * Send text to currentChannel (async)
+ */
+Bridge.prototype.sendText =  function(text,ok,fail) {
+    //text = this.configuration.currentChannel+'>'+text;
+    var instance = this.configuration.currentPort; 
+    this.configuration.currentPort.write(text, function(error) {        
+        if (error) {
+            fail(instance,error);
             err(error);
-        }        
+        } else {
+            instance.drain(function(error){
+                if (error) {
+                    fail(instance,error);
+                    err(error);
+                } else {
+                    if (ok) {
+                        ok(instance);
+                    }                                
+                }
+            });
+        }
     });
 }
 
 /**
- * Send text to currentChannel
+ * Close currentChannel (async)
  */
-Bridge.prototype.sendText =  function(text) {
-    err("ToDo: sendText "+text);
-}
-
-/**
- * Close currentChannel
- */
-Bridge.prototype.closeCurrentChannel =  function() {
-    var crtChannel = this.configuration.currentChannel;
-    var self = this;   
-    var port = this.getPortOfChannel(crtChannel);
-    if (!port) {
-        err(channelError(''));
-        return;
-    }    
-    if (port.isOpen()) {
-        port.close(function(error) {
+Bridge.prototype.closeCurrentChannel =  function(ok,fail) {
+    var instance = this.currentPort;           
+    if (this.configuration.currentPort) {
+        this.configuration.currentPort.close(function(error) {            
             if (error) {
+                fail(instance,error);
                 err(error);
+            } else {
+                if (ok) {
+                    ok(instance);
+                }                
             }
         });
-    } else {
-            err(self.getChannelInfo(crtChannel) + ' is already closed');        
-        }
+    }
 }
 
 /**
@@ -258,6 +307,7 @@ Bridge.prototype.closeCurrentChannel =  function() {
 Bridge.prototype.init = function() {
     this.configuration.title = this.configuration.name + ' v' +this.configuration.version+' '+this.configuration.tag;
     this.configure();
+    //this.changeChannel('lora');
     //console.log(this.configuration.title); 
     //this.mapChannel('lora','COM1');
     //bridge.map('bt','');

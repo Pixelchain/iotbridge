@@ -13,6 +13,11 @@ interpreter.setBridge(bridge);
 // assign a readline to the interpreter
 interpreter.assignReadline(readline);
 
-// run the commanline interpreter
-interpreter.run();
+// some default comands
+// change channel to lora
+interpreter.execute('lora');
+// open the port attached to lora channel
+//interpreter.execute('o');
 
+// run the commanline interpreter by waiting on the readline
+interpreter.run();
