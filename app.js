@@ -14,11 +14,24 @@ interpreter.setBridge(bridge);
 interpreter.assignReadline(readline);
 
 // some default comands
-// change channel to lora
+// change channel to bt
+// immediatelly execute :bt command
+interpreter.execute(':bt');
+
+// send H command after 100 msec
+interpreter.script('H',{
+    timeout     : 100    
+});
+// send D command after 100 msec
+interpreter.script('D',{
+    timeout     : 100    
+});
+/*
 interpreter.execute(':mad');
 interpreter.script('C DEAD System getBoardId ',{
     timeout : 200
 });
+*/
 // open the port attached to lora channel
 //interpreter.execute('o');
 
