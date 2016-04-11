@@ -15,7 +15,10 @@ interpreter.assignReadline(readline);
 
 // some default comands
 // change channel to lora
-interpreter.execute('lora');
+interpreter.execute(':mad');
+interpreter.script('C DEAD System getBoardId ',{
+    timeout : 200
+});
 // open the port attached to lora channel
 //interpreter.execute('o');
 

@@ -6,7 +6,19 @@ var Interpreter = function() {
         'name' : 'IOTInterpreter',
         'version' : '0.0.1',
         'tag' : 'beta',
-        'title' : ''    
+        'title' : '',
+        'protocols' : {
+            'mad' : {
+                'separator' : '\u0000',
+                'terminator': '\u0000\n'
+                
+            },
+            'bt' : {
+                'separator' : ' ',
+                'terminator': "\n"
+                
+            }
+        }
         };
                   
     this.prefix = '/';            
@@ -51,119 +63,165 @@ Interpreter.prototype.onClose =  function() {
     process.exit(0);
 };
 
-Interpreter.prototype.execute = function(line,valueHandler) {    
-        if (line.trim() === '') return;
+Interpreter.prototype.script = function(line,params) {
+    if (params) {
+        if ('interval' in params) {
+            var time = params.interval;            
+            setInterval(this.execute,time,line,null,this);
+        }
+        if ('timeout' in params) {
+            var time = params.timeout;            
+            setTimeout(this.execute,time,line,null,this);
+        }
         
-        var value = null;
+    }
+}
 
-        var ch = line.charAt(0);
-        var args = line.split(' ');
+Interpreter.prototype.execute = function(line,valueHandler,instance) {
+    
+    if (instance) {
+        self = instance
+    } else {
+        self = this;
+    }
         
-        if (args.length === 0) {
-            args.push(line);
+    if (line.trim() === '') {
+        if (self.configuration.lastCommand) {
+            line = self.configuration.lastCommand;
         }
-        
-        //************************
-        // Change Channel or Remap
-        //************************
-        //if (args[0].startsWith('/')) {
-        //    var channel = args[0].substring(1);
-        if (this.bridge.matchesChannel(args[0])) {
-            var channel = args[0];        
-            // change channel or map channel
-            if (args.length === 2) {
-                // map
-                var port = args[1];                
-                // change
-                if (this.bridge) {
-                    log('Mapping '+channel+' to '+port);
-                    if (this.bridge.mapChannel(channel,port)) {                    
-                        this.setPrompt(channel + '/');
-                    }
-                }
-                
-            } else
-            if (args.length === 1) {
-                // change       
-                if (this.bridge) {
-                    if (this.bridge.changeChannel(channel)) {
-                        this.setPrompt(channel + '/');
-                    }
-                }
-            };         
-        }
-        
-        //************************
-        // Send a text to the current channel
-        //************************
-        if (args[0].startsWith('>')) {
-            if (this.bridge) {                
-                this.bridge.sendText(args[0].substring(1));
-            }            
-        }        
-        
-        //************************
-        // List channels
-        //************************
-        if (args[0].startsWith('ls')) {
-            if (this.bridge) {             
-                if (args.length === 1) {
-                    log(this.bridge.list(''));
-                } else {                   
-                    log(this.bridge.list(args[1].trim()));
+    }
+            
+    var value = null;
+
+    var ch = line.charAt(0);
+    var args = line.split(' ');
+    
+    if (args.length === 0) {
+        args.push(line);
+    }
+    
+    //************************
+    // Change Channel or Remap
+    //************************
+    //if (args[0].startsWith('/')) {
+    //    var channel = args[0].substring(1);
+    if (self.bridge.matchesChannel(args[0])) {
+        var channel = args[0].substring(1);        
+        // change channel or map channel
+        if (args.length === 2) {
+            // map
+            var port = args[1];                
+            // change
+            if (self.bridge) {
+                log('Mapping '+channel+' to '+port);
+                if (self.bridge.mapChannel(channel,port)) {                    
+                    self.setPrompt(channel + '/');
                 }
             }
+            
+        } else
+        if (args.length === 1) {
+            // change       
+            if (self.bridge) {
+                if (self.bridge.changeChannel(channel)) {
+                    self.setPrompt(channel + '/');
+                }
+            }
+        };
+        return;         
+    }
+    
+    //************************
+    // List channels
+    //************************
+    if (args[0].startsWith(':ls')) {
+        if (self.bridge) {             
+            if (args.length === 1) {
+                log(self.bridge.list(''));
+            } else {                   
+                log(self.bridge.list(args[1].trim()));
+            }
         }
-                
-        //************************
-        // Open Channel
-        //************************
-        if (args[0].startsWith('o')) {
-            if (this.bridge) {
-                this.bridge.openCurrentChannel();                
-            }            
-        }        
-        
-        //************************
-        // Close Channel
-        //************************
-        if (args[0].startsWith('c')) {
-            if (this.bridge) {
-                this.bridge.closeCurrentChannel();
-            }            
-        }        
-        
-        //************************
-        // Help
-        //************************
-        if (args[0].startsWith('h')) {            
-            console.log('List of commands : ');
-            console.log(' channel port      - remap channel to a new port. For port use COM1 for Windows or /dev/tty-usbserial1 for Linux ');
-            console.log(' channel           - change to port mapped to a specific channel');
-            console.log(' >text             - sends the text to the current channel');
-            console.log(' ls                - list the current channels');
-            console.log(' o                 - open the port on the current channel');            
-            console.log(' c                 - close the port on the current channel');            
-            console.log(' exit              - close exit the process where the interpreter runs');
-            console.log(' h                 - this screen');            
-            console.log('Examples:');        
-            console.log(' lora COM1         - map "lora" channel to COM1');
-            console.log(' gps COM2          - map "gps" channel to COM2');
-            console.log(' bt COM3           - map "bt" channel to COM3');
-            console.log(' bt                - change to "gps" channel');
-            console.log(' D                 - send D command to the bluetooth device');
-        }    
-        
-        //************************
-        // exit
-        //************************
-        if (args[0] === 'exit') {
-            process.exit(0);
-        }        
+        return;
+    }
+            
+    //************************
+    // Open Channel
+    //************************
+    if (args[0].startsWith(':o')) {
+        if (self.bridge) {
+            self.bridge.openCurrentChannel();                
+        }
+        return;
+    }        
+    
+    //************************
+    // Close Channel
+    //************************
+    if (args[0].startsWith(':c')) {
+        if (self.bridge) {
+            self.bridge.closeCurrentChannel();
+        }
+        return;     
+    }        
+    
+    //************************
+    // Help
+    //************************
+    if (args[0].startsWith(':h')) {            
+        console.log('List of commands : ');
+        console.log(' :channel port      - remap channel to a new port. For port use COM1 for Windows or /dev/tty-usbserial1 for Linux');
+        console.log(' :channel           - change to port mapped to a specific channel');
+        console.log(' :ls                - list the current channels');
+        console.log(' :o                 - open the port on the current channel');
+        console.log(' :c                 - close the port on the current channel');
+        console.log(' :x                 - close exit the process where the interpreter runs');
+        console.log(' :h                 - this screen');
+        console.log(' text               - sends the text to the current channel');            
+        console.log('Examples:');        
+        console.log(' :lora COM1         - map "lora" channel to COM1');
+        console.log(' :gps COM2          - map "gps" channel to COM2');
+        console.log(' :bt COM3           - map "bt" channel to COM3');
+        console.log(' :bt                - change to "gps" channel');
+        console.log(' D                  - send D command to the bluetooth device');
+        return;
+    }    
+    
+    //************************
+    // exit
+    //************************
+    if (args[0] === ':x') {
+        process.exit(0);
+    }
+    
+    /**
+     * Send a command to the selected channel
+     */
+    
+    self.sendDeviceCommand(line);          
+    
 
-        if (valueHandler) {
-            valueHandler(value);
-        }            
+    if (valueHandler) {
+        valueHandler(value);
+    }            
+}
+
+function toHex(str) {
+	var hex = '';
+	for(var i=0;i<str.length;i++) {
+		hex += '-'+str.charCodeAt(i).toString(16);
+	}
+	return hex;
+}
+
+Interpreter.prototype.sendDeviceCommand = function(line) {        
+    if (this.bridge) {
+        var separator = this.configuration.protocols[this.bridge.configuration.currentChannel].separator; 
+        var terminator = this.configuration.protocols[this.bridge.configuration.currentChannel].terminator;
+        line = line.replace(/ /g , separator);
+        //console.log(toHex(line));
+        this.bridge.sendText(line+terminator);
+    }
 }
 
 /**
@@ -173,8 +231,10 @@ Interpreter.prototype.onNewLine = function(line) {
     // warning: here this is the rl, since this is an event from readline
     try {
         var self = this;
-        this.interpreter.execute(line,function(value) {
-            self.prompt();            
+        var interpreter = this.interpreter; 
+        interpreter.execute(line,function(value) {
+            self.prompt();
+            interpreter.configuration.lastCommand = line;            
         });        
     }  catch (error) {
         err(error);

@@ -18,13 +18,12 @@ var Bridge = function() {
     'currentChannel' : null,
     'currentPort' : null,
     'channels' : {
-        'lora' : 'COM3',
-        'gps'  : 'COM4',
-        'btle' : 'COM5'          
+        'bt'  : 'COM7',
+        'mad'  : 'COM8'          
     },
     'ports' : {
         
-        },
+        },       
     'routes' : {
         //source : {destinations}
         'lora' : {
@@ -36,6 +35,7 @@ var Bridge = function() {
         'btle' : {                
             }                        
         },
+      'timers' : [],
       'filters' : {
           'lora' : {
               
@@ -231,7 +231,7 @@ function channelError(channel) {
  */
 Bridge.prototype.matchesChannel =  function(text) {
     for (var channel in this.configuration.channels) {
-        if (channel === text) {
+        if ((':'+channel) === text) {
             return true;
         }
     }
@@ -261,7 +261,7 @@ Bridge.prototype.openCurrentChannel =  function(ok, fail) {
  * Send text to currentChannel (async)
  */
 Bridge.prototype.sendText =  function(text,ok,fail) {
-    //text = this.configuration.currentChannel+'>'+text;
+    //text = this.configuration.currentChannel+'>'+text;    
     var instance = this.configuration.currentPort; 
     this.configuration.currentPort.write(text, function(error) {        
         if (error) {
