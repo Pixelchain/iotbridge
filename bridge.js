@@ -18,8 +18,8 @@ var Bridge = function() {
     'currentChannel' : null,
     'currentPort' : null,
     'channels' : {
-        'bt'  : 'COM7',
-        'mad'  : 'COM8'          
+        'bt0'  : 'COM7',
+        'bt1'  : 'COM9'          
     },
     'ports' : {
         

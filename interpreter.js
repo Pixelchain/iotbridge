@@ -214,13 +214,29 @@ function toHex(str) {
 	return hex;
 }
 
+Interpreter.prototype.getProtocol = function(channel) {
+    for (var key in this.configuration.protocols) {
+        if (channel.startsWith(key)) {
+            return this.configuration.protocols[key];
+        }
+    }
+}
+
 Interpreter.prototype.sendDeviceCommand = function(line) {        
     if (this.bridge) {
-        var separator = this.configuration.protocols[this.bridge.configuration.currentChannel].separator; 
-        var terminator = this.configuration.protocols[this.bridge.configuration.currentChannel].terminator;
-        line = line.replace(/ /g , separator);
-        //console.log(toHex(line));
-        this.bridge.sendText(line+terminator);
+        if (this.bridge.configuration.currentChannel) {
+            var protocol = this.getProtocol(this.bridge.configuration.currentChannel);
+            if (protocol) {
+                var separator = protocol.separator; 
+                var terminator = protocol.terminator;
+                line = line.replace(/ /g , separator);
+                line = line + terminator;                
+            } else {
+                line = line + '\n';
+            }         
+            //console.log(toHex(line));
+            this.bridge.sendText(line);
+        }
     }
 }
 

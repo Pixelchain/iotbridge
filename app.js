@@ -16,7 +16,7 @@ interpreter.assignReadline(readline);
 // some default comands
 // change channel to bt
 // immediatelly execute :bt command
-interpreter.execute(':bt');
+interpreter.execute(':bt0');
 
 // send H command after 100 msec
 interpreter.script('H',{
