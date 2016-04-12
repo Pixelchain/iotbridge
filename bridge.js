@@ -1,11 +1,4 @@
 /**
- * Instanciate the global SerialPort class
- */
-serialport = require("serialport");
-SerialPort = serialport.SerialPort;
-
-
-/**
  * Define the Bridge class and constructor
  */
 var Bridge = function() {
@@ -18,7 +11,8 @@ var Bridge = function() {
     'currentChannel' : null,
     'currentPort' : null,
     'channels' : {
-        'lora'  : 'COM29'                
+        'lora0'  : 'COM10',
+        'lora1'  : 'COM11'
     },
     'ports' : {
         
@@ -48,7 +42,7 @@ var Bridge = function() {
           },          
       }
     }
-   this.handler = null;
+   this.dataHandler = null;
    this.init();                  
 };
 
@@ -157,6 +151,12 @@ Bridge.prototype.configure = function() {
     this.configuration.ports = {};
     var self = this;
     
+    /**
+    * Instanciate the SerialPort class
+    */
+    var serialport = require("serialport");
+    var SerialPort = serialport.SerialPort;
+    
     for (var channel in this.configuration.channels) {
                
        var portName = this.configuration.channels[channel];
@@ -178,6 +178,7 @@ Bridge.prototype.configure = function() {
         //dataCallback
         //disconnectedCallback
         //platformOptions - sets platform specific options, see below.
+
         try {                    
             var port = new SerialPort(
                 //"/dev/tty-usbserial1", {
@@ -185,19 +186,39 @@ Bridge.prototype.configure = function() {
                     baudrate: 115200,
                     dataBits : 8,
                     stopBits : 1,
-                    parity : 'none'                                        
+                    parity : 'none',
+                    parser: serialport.parsers.raw
+                    //parser: serialport.parsers.readline('\n')
                 }, false);
+
+            port.channel = channel;
+            port.bridge = this;
+                
+            this.configuration.ports[portName]= port;
             port.on('data',function(data) {
-                    if (self.handler) {
-                        self.handler(self,channel,port,data);
+                    if (self.dataHandler) {
+                        self.dataHandler(this,data);
                     }             
                 });
-            this.configuration.ports[portName]= port;
-            port.open();                
+            port.on('error',function(data) {
+                    if (self.errorHandler) {
+                        self.errorHandler(this,data);
+                    }             
+                });
+            port.on('disconnect',function(data) {
+                    if (self.disconnectHandler) {
+                        self.disconnectHandler(this,data);
+                    }             
+                });
+            port.on('close',function(data) {
+                    if (self.closeHandler) {
+                        self.closeHandler(this,data);
+                    }             
+                });
+            port.open();
         } catch (ex) {
             err(ex);
         }
-       
        //console.log(this.configuration.ports[this.configuration.channels[channel]]); 
     }
 }
@@ -222,7 +243,7 @@ Bridge.prototype.changeChannel =  function(channel) {
  * Return a channel error text
  */
 function channelError(channel) {
-    return 'Channel '+channel+' not found. Use "/name port" command to define a new channel e.g. >/lora COM1';
+    return 'Channel '+channel+' not found. Use ":name port" command to define a new channel e.g. >:lora COM1';
 }
 
 /**

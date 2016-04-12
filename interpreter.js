@@ -9,16 +9,19 @@ var Interpreter = function() {
         'title' : '',
         'protocols' : {
             'mad' : {
+                'encoding' : 'tcf',
                 'separator' : '\u0000',
                 'terminator': '\u0000\n'
                 
             },
             'bt' : {
+                'encoding' : 'text',
                 'separator' : ' ',
                 'terminator': "\n"
                 
             },
             'lora' : {
+                'encoding' : 'hex',
                 'separator' : ' ',
                 'terminator': "\r\n"
                 
@@ -26,7 +29,7 @@ var Interpreter = function() {
         }
         };
                   
-    this.prefix = '/';            
+    this.prefix = '>';            
     this.bridge = null;        
     this.init();
                         
@@ -68,21 +71,26 @@ Interpreter.prototype.onClose =  function() {
     process.exit(0);
 };
 
-Interpreter.prototype.script = function(line,params) {
+Interpreter.prototype.async = function(lines,params) {
+    var timer = 0;
     if (params) {
-        if ('interval' in params) {
-            var time = params.interval;            
-            setInterval(this.execute,time,line,null,this);
-        }
         if ('timeout' in params) {
-            var time = params.timeout;            
-            setTimeout(this.execute,time,line,null,this);
-        }
-        
+            time = params.timeout;            
+        }        
     }
+    
+    timer+=time;                        
+     
+    if (lines.constructor === Array) {
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];            
+            setTimeout(this.execute,timer,line,null,this,true);
+            timer+=time;            
+        }
+   }    
 }
 
-Interpreter.prototype.execute = function(line,valueHandler,instance) {
+Interpreter.prototype.execute = function(line,valueHandler,instance,echo) {
     
     if (instance) {
         self = instance
@@ -94,8 +102,16 @@ Interpreter.prototype.execute = function(line,valueHandler,instance) {
         if (self.configuration.lastCommand) {
             line = self.configuration.lastCommand;
         }
-    }
+    }   
             
+    if (echo) {
+        log(line);
+    }
+    
+    if (line.charAt(0) === ';') {
+        return;
+    }
+                
     var value = null;
 
     var ch = line.charAt(0);
@@ -120,7 +136,7 @@ Interpreter.prototype.execute = function(line,valueHandler,instance) {
             if (self.bridge) {
                 log('Mapping '+channel+' to '+port);
                 if (self.bridge.mapChannel(channel,port)) {                    
-                    self.setPrompt(channel + '/');
+                    self.setPrompt(channel + '>');
                 }
             }
             
@@ -129,7 +145,7 @@ Interpreter.prototype.execute = function(line,valueHandler,instance) {
             // change       
             if (self.bridge) {
                 if (self.bridge.changeChannel(channel)) {
-                    self.setPrompt(channel + '/');
+                    self.setPrompt(channel + '>');
                 }
             }
         };
@@ -240,7 +256,7 @@ Interpreter.prototype.sendDeviceCommand = function(line) {
                 line = line + '\n';
             }         
             //console.log(toHex(line));
-            this.bridge.sendText(line);
+            this.bridge.sendText(line);            
         }
     }
 }
@@ -289,18 +305,35 @@ console.log("hello world!");
 Interpreter.prototype.setBridge = function(bridge) {
     this.bridge = bridge;
     if (this.bridge) {
-        this.bridge.handler = this.bridgeHandler;
+        this.bridge.dataHandler = this.bridgeDataHandler;
+        this.bridge.interpreter = this;
         console.log("Bridging with "+this.bridge.configuration.title);
     }
 };
 
 /**
- * Handler that receives data from all channels
+ * dataHandler that receives data from all channels
  */
-Interpreter.prototype.bridgeHandler = function(bridge,channel,port,data) {
-    log('\n'+channel+'/<'+data.toString('utf8'));
+Interpreter.prototype.bridgeDataHandler = function(port,data) {
+    //log(data.toString('utf8'));
+    port.bridge.interpreter.write('\r\n'+port.channel+"<"+data.toString('utf8'));
+    //port.bridge.interpreter.write(channel+'<'+data);
+    //bridge.interpreter.rl.prompt();    
 }
 
+/**
+ * 
+ */
+Interpreter.prototype.write = function(text) {
+    //this.rl.setPrompt(this.prefix+text);
+    //this.rl.prompt();
+    //console.log(text);
+    //this.rl.clearLine(process.stdout,0);
+    //this.rl.clearLine(process.stdout);
+    process.stdout.write(text);
+    this.rl.setPrompt(this.prefix);
+    this.rl.prompt();    
+}
 /**
  * Init the object instance
  */
