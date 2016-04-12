@@ -17,6 +17,11 @@ var Interpreter = function() {
                 'separator' : ' ',
                 'terminator': "\n"
                 
+            },
+            'lora' : {
+                'separator' : ' ',
+                'terminator': "\r\n"
+                
             }
         }
         };

@@ -18,8 +18,7 @@ var Bridge = function() {
     'currentChannel' : null,
     'currentPort' : null,
     'channels' : {
-        'bt0'  : 'COM7',
-        'bt1'  : 'COM9'          
+        'lora'  : 'COM29'                
     },
     'ports' : {
         

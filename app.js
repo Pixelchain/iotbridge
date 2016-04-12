@@ -16,9 +16,10 @@ interpreter.assignReadline(readline);
 // some default comands
 // change channel to bt
 // immediatelly execute :bt command
-interpreter.execute(':bt0');
+interpreter.execute(':lora');
 
 // send H command after 100 msec
+/*
 interpreter.script('H',{
     timeout     : 100    
 });
@@ -26,7 +27,6 @@ interpreter.script('H',{
 interpreter.script('D',{
     timeout     : 100    
 });
-/*
 interpreter.execute(':mad');
 interpreter.script('C DEAD System getBoardId ',{
     timeout : 200
