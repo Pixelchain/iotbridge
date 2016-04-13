@@ -11,7 +11,7 @@ var Interpreter = function() {
             'mad' : {
                 'encoding' : 'tcf',
                 'separator' : '\u0000',
-                'terminator': '\u0000\n'
+                'terminator': '\u0000\r\n'
                 
             },
             'bt' : {
@@ -57,6 +57,22 @@ function err(params) {
     console.error(params);
 }
 
+var lastHrTime = 0;
+var lastTime = 0;
+function hrtime() {
+    //var now = process.hrtime()
+    //var newHrTime = now[0] * 1000000 + now[1] / 1000;
+    //var delta = newHrTime - lastHrTime;
+    var newTime = new Date().getTime();
+    if (lastTime === 0) {
+        lastTime = newTime;
+        return 0;
+    }    
+    var delta = newTime - lastTime;
+    lastTime = newTime;
+    return delta.toString();       
+}
+
 /**
  * Assign a readline to the interpreter
  */
@@ -74,7 +90,7 @@ Interpreter.prototype.onClose =  function() {
 Interpreter.prototype.async = function(lines,params) {
     var timer = 0;
     if (lines.constructor === Array) {
-        var c = '';
+        var c = 'c';
         var r = ''
         var d = 0;
         for (var i = 0; i < lines.length; i++) {
@@ -158,7 +174,45 @@ Interpreter.prototype.execute = function(line,valueHandler,instance,echo) {
         };
         return;         
     }
-    
+    /*
+    else {
+        if (args.length == 2) {
+            // we assume that we want to create a channel if there are two params
+            var channel = args[0].substring(1);
+            var port = args[1];                
+            // create
+            if (self.bridge) {
+                log('Creating and mapping '+channel+' to '+port);
+                if (self.bridge.mapChannel(channel,port)) {                    
+                    self.setPrompt(channel + '>');
+                }
+            }            
+        }
+    }
+    */
+
+    //************************
+    // Map a channel to a port
+    //************************
+    if (args[0].startsWith(':m')) {
+        if (self.bridge) {             
+            if (args.length === 3) {
+                var channel = args[1];
+                var port = args[2];
+                // create
+                if (self.bridge) {
+                    log('Creating and mapping '+channel+' to '+port);
+                    if (self.bridge.mapChannel(channel,port)) {                    
+                        self.setPrompt(channel + '>');
+                    }
+                }
+            } else {                   
+                err('Map command expects two parameters, channel and port');
+            }
+        }
+        return;
+    }
+        
     //************************
     // List channels
     //************************
@@ -200,16 +254,17 @@ Interpreter.prototype.execute = function(line,valueHandler,instance,echo) {
         console.log('List of commands : ');
         console.log(' :channel port      - remap channel to a new port. For port use COM1 for Windows or /dev/tty-usbserial1 for Linux');
         console.log(' :channel           - change to port mapped to a specific channel');
+        console.log(' :m channel port    - map a channel to a port');
         console.log(' :ls                - list the current channels');
         console.log(' :o                 - open the port on the current channel');
         console.log(' :c                 - close the port on the current channel');
         console.log(' :x                 - close exit the process where the interpreter runs');
         console.log(' :h                 - this screen');
         console.log(' text               - sends the text to the current channel');            
-        console.log('Examples:');        
-        console.log(' :lora COM1         - map "lora" channel to COM1');
-        console.log(' :gps COM2          - map "gps" channel to COM2');
-        console.log(' :bt COM3           - map "bt" channel to COM3');
+        console.log('Examples:');
+        console.log(' :m lora COM1       - map "lora" channel to COM1');                
+        console.log(' :m gps COM2        - map "gps" channel to COM2');
+        console.log(' :m bt COM3         - map "bt" channel to COM3');
         console.log(' :bt                - change to "gps" channel');
         console.log(' D                  - send D command to the bluetooth device');
         return;
@@ -327,7 +382,7 @@ Interpreter.prototype.setBridge = function(bridge) {
  * dataHandler that receives data from all channels
  */
 Interpreter.prototype.bridgeDataHandler = function(port,data) {    
-    port.bridge.interpreter.write('\r\n'+port.channel+"<"+data.toString('utf8'));    
+    port.bridge.interpreter.write('\r\n['+hrtime()+']'+port.channel+"<"+data.toString('utf8'));    
 }
 
 /**

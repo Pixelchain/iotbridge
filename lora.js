@@ -17,9 +17,11 @@ interpreter.assignReadline(readline);
 // change channel to bt
 // immediatelly execute :bt command
 //interpreter.execute(':lora0');
-/*
+
 interpreter.async(
     [        
+        { 'c' : ':m lora0 COM29', 'd' : 500},
+        { 'c' : ':m lora1 COM6', 'd' : 500},        
         { 'c' : '; Set up Receiver', 'r' : '', 'd' : 50}, 
         { 'c' : ':lora0', 'r' : '', 'd' : 50},
         { 'c' : 'mac pause', 'r' : '', 'd' : 50},
@@ -32,7 +34,7 @@ interpreter.async(
         { 'c' : 'radio tx 0123456789ABCDEF', 'r' : '', 'd' : 50}
     ]
     );
-
+/*
 interpreter.async(
     [
     { 'c' : ':mad0', 'd' : 50},

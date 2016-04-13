@@ -10,11 +10,9 @@ var Bridge = function() {
     'title' : '',
     'currentChannel' : null,
     'currentPort' : null,
-    'channels' : {
-        'mad'  : 'COM39'                
+    'channels' : {                
     },
-    'ports' : {
-        
+    'ports' : {        
         },       
     'routes' : {
         //source : {destinations}
@@ -203,6 +201,7 @@ Bridge.prototype.configure = function() {
             port.on('error',function(data) {
                     if (self.errorHandler) {
                         self.errorHandler(this,data);
+                        err(data);
                     }             
                 });
             port.on('disconnect',function(data) {
@@ -254,7 +253,7 @@ Bridge.prototype.matchesChannel =  function(text) {
         if ((':'+channel) === text) {
             return true;
         }
-    }
+    }    
     return false;
 }
     
