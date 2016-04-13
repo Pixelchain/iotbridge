@@ -20,37 +20,18 @@ interpreter.assignReadline(readline);
 
 interpreter.async(
     [        
-        '; Set up Receiver',
-        ':lora0',
-//        'sys get ver',
-        'mac pause',
-/*      'radio get mod',
-        'radio get freq',
-        'radio get sf',
-        'radio get bw',
-        'radio get cr',
-        'radio get prlen',
-        'radio get pwr',
-*/        
-        'radio set wdt 0',
-        'radio rx 0',
-        '; Set up Sender',
-        ':lora1',        
-//        'sys get ver',
-        'mac pause',
-/*      'radio get mod',
-        'radio get freq',
-        'radio get sf',
-        'radio get bw',
-        'radio get cr',
-        'radio get prlen',
-        'radio get pwr',
-*/        
-        'radio set pwr 14',
-        'radio tx 0123456789ABCDEF'
-    ],{
-        timeout     : 50
-    });
+        { 'c' : '; Set up Receiver', 'r' : '', 'd' : 50}, 
+        { 'c' : ':lora0', 'r' : '', 'd' : 50},
+        { 'c' : 'mac pause', 'r' : '', 'd' : 50},
+        { 'c' : 'radio set wdt 0', 'r' : '', 'd' : 50},
+        { 'c' : 'radio rx 0', 'r' : '', 'd' : 50},
+        { 'c' : '; Set up Sender', 'r' : '', 'd' : 50},
+        { 'c' : ':lora1', 'r' : '', 'd' : 50},
+        { 'c' : 'mac pause', 'r' : '', 'd' : 50},
+        { 'c' : 'radio set pwr 14', 'r' : '', 'd' : 50},
+        { 'c' : 'radio tx 0123456789ABCDEF', 'r' : '', 'd' : 50}
+    ]
+    );
 
 /*
 interpreter.async(

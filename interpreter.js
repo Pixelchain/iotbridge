@@ -73,19 +73,23 @@ Interpreter.prototype.onClose =  function() {
 
 Interpreter.prototype.async = function(lines,params) {
     var timer = 0;
-    if (params) {
-        if ('timeout' in params) {
-            time = params.timeout;            
-        }        
-    }
-    
-    timer+=time;                        
-     
     if (lines.constructor === Array) {
+        var c = '';
+        var r = ''
+        var d = 0;
         for (var i = 0; i < lines.length; i++) {
-            var line = lines[i];            
-            setTimeout(this.execute,timer,line,null,this,true);
-            timer+=time;            
+            var line = lines[i];
+            if(line.hasOwnProperty('c')){
+                c = line.c;
+            }
+            if(line.hasOwnProperty('r')){
+                r = line.r;
+            }
+            if(line.hasOwnProperty('d')){
+                d = line.d;
+            }
+            timer+=d;
+            line.timerHandle = setTimeout(this.execute,timer,line,null,this,true);            
         }
    }    
 }
@@ -97,28 +101,31 @@ Interpreter.prototype.execute = function(line,valueHandler,instance,echo) {
     } else {
         self = this;
     }
-        
-    if (line.trim() === '') {
+
+    var command = line.c;
+    var response = line.r;
+            
+    if (command.trim() === '') {
         if (self.configuration.lastCommand) {
-            line = self.configuration.lastCommand;
+            command = self.configuration.lastCommand;
         }
     }   
             
     if (echo) {
-        log(line);
+        log(command);
     }
     
-    if (line.charAt(0) === ';') {
+    if (command.charAt(0) === ';') {
         return;
     }
                 
     var value = null;
 
-    var ch = line.charAt(0);
-    var args = line.split(' ');
+    var ch = command.charAt(0);
+    var args = command.split(' ');
     
     if (args.length === 0) {
-        args.push(line);
+        args.push(command);
     }
     
     //************************
@@ -219,7 +226,7 @@ Interpreter.prototype.execute = function(line,valueHandler,instance,echo) {
      * Send a command to the selected channel
      */
     
-    self.sendDeviceCommand(line);          
+    self.sendDeviceCommand(command,response);          
     
 
     if (valueHandler) {
@@ -243,7 +250,7 @@ Interpreter.prototype.getProtocol = function(channel) {
     }
 }
 
-Interpreter.prototype.sendDeviceCommand = function(line) {        
+Interpreter.prototype.sendDeviceCommand = function(line,response) {        
     if (this.bridge) {
         if (this.bridge.configuration.currentChannel) {
             var protocol = this.getProtocol(this.bridge.configuration.currentChannel);
@@ -256,7 +263,7 @@ Interpreter.prototype.sendDeviceCommand = function(line) {
                 line = line + '\n';
             }         
             //console.log(toHex(line));
-            this.bridge.sendText(line);            
+            this.bridge.sendText(line,response);            
         }
     }
 }
@@ -314,11 +321,8 @@ Interpreter.prototype.setBridge = function(bridge) {
 /**
  * dataHandler that receives data from all channels
  */
-Interpreter.prototype.bridgeDataHandler = function(port,data) {
-    //log(data.toString('utf8'));
-    port.bridge.interpreter.write('\r\n'+port.channel+"<"+data.toString('utf8'));
-    //port.bridge.interpreter.write(channel+'<'+data);
-    //bridge.interpreter.rl.prompt();    
+Interpreter.prototype.bridgeDataHandler = function(port,data) {    
+    port.bridge.interpreter.write('\r\n'+port.channel+"<"+data.toString('utf8'));    
 }
 
 /**

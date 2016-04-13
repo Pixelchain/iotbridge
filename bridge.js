@@ -11,8 +11,8 @@ var Bridge = function() {
     'currentChannel' : null,
     'currentPort' : null,
     'channels' : {
-        'lora0'  : 'COM10',
-        'lora1'  : 'COM11'
+        'lora0'  : 'COM29',
+        'lora1'  : 'COM6'        
     },
     'ports' : {
         
@@ -197,7 +197,8 @@ Bridge.prototype.configure = function() {
             this.configuration.ports[portName]= port;
             port.on('data',function(data) {
                     if (self.dataHandler) {
-                        self.dataHandler(this,data);
+                        this.response = data;//tag that we got response                        
+                        self.dataHandler(this,data);                        
                     }             
                 });
             port.on('error',function(data) {
@@ -280,10 +281,12 @@ Bridge.prototype.openCurrentChannel =  function(ok, fail) {
 /**
  * Send text to currentChannel (async)
  */
-Bridge.prototype.sendText =  function(text,ok,fail) {
+Bridge.prototype.sendText =  function(text,response,ok,fail) {
     //text = this.configuration.currentChannel+'>'+text;    
-    var instance = this.configuration.currentPort; 
-    this.configuration.currentPort.write(text, function(error) {        
+    var instance = this.configuration.currentPort;
+    instance.command = text;
+    instance.response = null; // tag that we didn't get yet a response 
+    instance.write(text, function(error) {        
         if (error) {
             fail(instance,error);
             err(error);
