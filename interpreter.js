@@ -271,11 +271,16 @@ Interpreter.prototype.sendDeviceCommand = function(line,response) {
 /**
  * Serve on new line of readline e.g. when pressing enter after editing a line
  */
-Interpreter.prototype.onNewLine = function(line) {
+Interpreter.prototype.onNewLine = function(command) {
     // warning: here this is the rl, since this is an event from readline
     try {
         var self = this;
         var interpreter = this.interpreter; 
+        var line = {
+            c : command,
+            r : '',
+            d : 0
+        };
         interpreter.execute(line,function(value) {
             self.prompt();
             interpreter.configuration.lastCommand = line;            
